@@ -4,8 +4,8 @@ Implements a simple interface to array jobs in SLURM.
 
 from pathlib import Path
 
-from slurm_tools.utils.reading_templates import read_template
 from slurm_tools.parameters import ArrayJobParameters, _ArrayJobParametersInTemplate
+from slurm_tools.utils.reading_templates import read_template
 
 
 def _parse_array_job_parameters_for_template(
