@@ -8,6 +8,19 @@ from slurm_tools.parameters import ArrayJobParameters, _ArrayJobParametersInTemp
 from slurm_tools.utils.reading_templates import read_template
 
 
+def _get_job_directory(parameters: ArrayJobParameters) -> Path:
+    """
+    Get the job directory.
+
+    Args:
+        parameters (ArrayJobParameters): The parameters for the array job.
+
+    Returns:
+        job_directory (Path): The job directory.
+    """
+    return parameters.script_directory / parameters.job_name.replace(" ", "_")
+
+
 def _parse_array_job_parameters_for_template(
     parameters: ArrayJobParameters,
 ) -> _ArrayJobParametersInTemplate:
@@ -25,24 +38,12 @@ def _parse_array_job_parameters_for_template(
         output_log_path=parameters.output_log_path,
         output_error_path=parameters.output_error_path,
         partition=parameters.partition,
+        preamble=parameters.preamble,
         gpu_resources=parameters.gpu_resources,
         line_count=len(parameters.commands),
         parallel_count=parameters.parallel_count,
-        commands_file=parameters.script_directory / "commands.txt",
+        commands_file=_get_job_directory(parameters) / "commands.txt",
     )
-
-
-def _get_job_directory(parameters: ArrayJobParameters) -> Path:
-    """
-    Get the job directory.
-
-    Args:
-        parameters (ArrayJobParameters): The parameters for the array job.
-
-    Returns:
-        job_directory (Path): The job directory.
-    """
-    return parameters.script_directory / parameters.job_name.replace(" ", "_")
 
 
 def _create_job_directory(parameters: ArrayJobParameters):
@@ -65,8 +66,9 @@ def _write_commands(commands: list[str], parameters: ArrayJobParameters):
     """
     _create_job_directory(parameters)
     with open(_get_job_directory(parameters) / "commands.txt", "w") as commands_file:
-        for command in commands:
+        for command in commands[:-1]:
             commands_file.write(f"{command}\n")
+        commands_file.write(commands[-1])
 
 
 def parallelize_commands_in_array_job(
@@ -90,6 +92,12 @@ def parallelize_commands_in_array_job(
         _get_job_directory(array_parameters) / ".gitignore", "w"
     ) as gitignore_file:
         gitignore_file.write("*\n")
+
+    with open(_get_job_directory(array_parameters) / "readme.md", "w") as readme_file:
+        readme_file.write(
+            "You can submit this job using `sbatch array_job.sh`,"
+            " and it will run all lines in commands.txt in parallel.\n"
+        )
 
     template_parameters = _parse_array_job_parameters_for_template(array_parameters)
 
